@@ -7,5 +7,6 @@ angular.module("trends").controller("homeController",
 		$http.post("/getTrend").then(function(res) {
 			console.log(res);
 			$scope.newsList = JSON.parse(res.data.data);
+			console.log($scope.newsList);
         });
 	}]);
