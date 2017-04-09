@@ -1,0 +1,21 @@
+{
+  "name": "google-trends-crawler",
+  "version": "1.0.0",
+  "description": "",
+  "author": "Wang Yanhao",
+  "license": "MIT",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "angular": "^1.6.4",
+    "angular-route": "^1.6.4",
+    "body-parser": "^1.16.0",
+    "express": "^4.14.1",
+    "google-trends-api": "^4.1.0",
+    "jade": "^1.11.0",
+    "path": "^0.12.7",
+    "request": "^2.81.0",
+    "save": "^2.3.0"
+  }
+}
