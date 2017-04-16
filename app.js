@@ -23,32 +23,49 @@ app.use('/scripts', express.static(__dirname + '/node_modules/angular-route'));
 
 
 // currently used to generate csv file
-var category = 'b';
 var region = 'US';
-
+// variables needed to crawl top 15 in the Google Trends
+var category = 'b';
 var url = 'https://trends.google.com.sg/trends/api/stories/latest?hl=en-US&tz=-480&cat=' 
 		+ category + '&fi=15&fs=15&geo=' + region + '&ri=300&rs=15&sort=0';
+
+// keyword list needed to craw for individual keyword information
+var keywordList = [
+					['North Korea', 'America'],
+					['North Korea', 'South Korea']
+				  ];
+
 // unit in days --> note: if set to 7 or above the interval will become daily instead of hourly
 var durationPeriod = 6; 
 var startDate = new Date((new Date).getTime() - durationPeriod * 24 * 60 * 60 * 1000);
 var startDateString = startDate.toISOString().substring(0, 10);
 
-request(url, function (error, response, body) {
-	if (error) {
-		console.log("Error: " + error);
-	}
-	// Check status code (200 is HTTP OK)
-	if (response.statusCode === 200) {
-		var stories = JSON.parse(body.substring(4));
-		var storyList = stories.storySummaries.trendingStories;
-		var titleList = []
-
-		for (var i in storyList) {
-			titleList.push(storyList[i].title);
+var crawlTop15TrendsName = function() {
+	request(url, function (error, response, body) {
+		if (error) {
+			console.log("Error: " + error);
 		}
+		// Check status code (200 is HTTP OK)
+		if (response.statusCode === 200) {
+			console.log('Top 15 in the list are : ');
 
-		var promises = [];
+			var stories = JSON.parse(body.substring(4));
+			var storyList = stories.storySummaries.trendingStories;
+			var titleList = []
 
+			for (var i in storyList) {
+				// titleList.push(storyList[i].title);
+				console.log(storyList[i].title);
+			}
+		}
+	});
+}
+
+var crawlKeywordListTrends = function(titleListLst) {
+	var promises = [];
+
+	for (var i in titleListLst) {
+		var titleList = titleListLst[i];
 		// crawl for each title
 		for (var index in titleList) {
 			var cbFuntion = function(region, title, rank, resolve, results) {
@@ -98,26 +115,29 @@ request(url, function (error, response, body) {
 				})
 			);	
 		}
-
-		Promise.all(promises).then(function(result) {
-			console.log('result returned ' + result.length);
-
-			var writer = csvWriter({ headers: result[0].header });
-			writer.pipe(fs.createWriteStream(result[0].lineData[0] + '.csv'));
-
-			// write to file
-			result.forEach((res) => {
-				writer.write(res.lineData);
-			});
-			writer.end();
-
-			console.log('task completed');
-		}, function(err) {
-			console.log(err);
-		});
 	}
-});
 
+	Promise.all(promises).then(function(result) {
+		console.log('result returned ' + result.length);
+
+		var writer = csvWriter({ headers: result[0].header });
+		writer.pipe(fs.createWriteStream(result[0].lineData[0] + '.csv'));
+
+		// write to file
+		result.forEach((res) => {
+			writer.write(res.lineData);
+		});
+		writer.end();
+
+		console.log('task completed');
+	}, function(err) {
+		console.log(err);
+	});
+}
+
+// temporary usage -> function call
+// crawlTop15TrendsName();
+crawlKeywordListTrends(keywordList);
 
 // code related to website is commented out temporarily for ease of generating csv function alone
 
