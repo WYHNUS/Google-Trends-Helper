@@ -31,8 +31,8 @@ var url = 'https://trends.google.com.sg/trends/api/stories/latest?hl=en-US&tz=-4
 
 // keyword list needed to craw for individual keyword information
 var keywordList = [
-					['North Korea', 'America'],
-					['North Korea', 'South Korea']
+					['North Korea', 'Netherlands', 'Singapore'],
+					['North Korea', 'South Korea', 'America']
 				  ];
 
 // unit in days --> note: if set to 7 or above the interval will become daily instead of hourly
@@ -66,66 +66,60 @@ var crawlKeywordListTrends = function(titleListLst) {
 
 	for (var i in titleListLst) {
 		var titleList = titleListLst[i];
-		// crawl for each title
-		for (var index in titleList) {
-			var cbFuntion = function(region, title, rank, resolve, results) {
-				var resList = JSON.parse(results);
-				var timelineData = resList.default.timelineData;
+		// call back function
+		var cbFuntion = function(region, titleList, resolve, results) {
+			var resList = JSON.parse(results);
+			var timelineData = resList.default.timelineData;
 
-				var headers = ['Region', 'Rank', 'News Title'];
-				for (var i in timelineData) {
-					headers.push(timelineData[i].formattedAxisTime);
+			var headers = ['Region', 'News Title'];
+			for (var i in timelineData) {
+				headers.push(timelineData[i].formattedAxisTime);
+			}
+
+			var lineData = [];
+			for (var i in titleList) {
+				lineData.push([region, titleList[i]]);
+				for (var j in timelineData) {
+					lineData[i].push(timelineData[j].value[i]);
 				}
+			}
 
-				var lineData = [region, parseInt(rank) + 1, title];
-				for (var i in timelineData) {
-					// check if value contain more than one word
-					if (timelineData[i].value.length > 1) {
-						// add everything together
-						var sum = 0;
-						for (var j in timelineData[i].value) {
-							sum += timelineData[i].value[j];
-						}
-						lineData.push(sum);
-					} else {
-						lineData.push(timelineData[i].value[0]);
-					}
-				}
+			console.log('resolve task list' + titleList);
+			resolve({
+				header: headers,
+				lineData: lineData
+			});
+		};
 
-				console.log('resolve task ' + title);
-				resolve({
-					header: headers,
-					lineData: lineData
+		promises.push(
+			new Promise((resolve, reject) => {
+				var cbBind = cbFuntion.bind(null, region, titleList);
+
+				googleTrends.interestOverTime({
+					keyword: titleList,
+					startTime: new Date(startDateString), 
+					resolution: region
+				}).then((res) => {
+					cbBind(resolve, res);
+				}).catch((err) => {
+					reject(err);
 				});
-			};
-
-			promises.push(
-				new Promise((resolve, reject) => {
-					var cbBind = cbFuntion.bind(null, region, titleList[index], index);
-
-					googleTrends.interestOverTime({
-						keyword: titleList[index].split(','), 
-						startTime: new Date(startDateString), 
-						resolution: region
-					}).then((res) => {
-						cbBind(resolve, res);
-					}).catch((err) => {
-						reject(err);
-					});
-				})
-			);	
-		}
+			})
+		);	
 	}
 
 	Promise.all(promises).then(function(result) {
 		console.log('result returned ' + result.length);
 
 		var writer = csvWriter({ headers: result[0].header });
-		writer.pipe(fs.createWriteStream(result[0].lineData[0] + '.csv'));
+		writer.pipe(fs.createWriteStream(result[0].lineData[0][0] + '.csv'));
 
 		// write to file
 		result.forEach((res) => {
-			writer.write(res.lineData);
+			for (var i in res.lineData) {
+				writer.write(res.lineData[i]);
+			}
+			writer.write('\n');
 		});
 		writer.end();
 
