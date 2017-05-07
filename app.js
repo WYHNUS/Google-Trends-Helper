@@ -37,7 +37,14 @@ var keywordList = [
 
 // unit in days --> note: if set to 7 or above the interval will become daily instead of hourly
 var durationPeriod = 6; 
-var startDate = new Date((new Date).getTime() - durationPeriod * 24 * 60 * 60 * 1000);
+
+// base time set to UTC +5 which in line with the default one in google-trends-api
+// refer to https://webcache.googleusercontent.com/search?q=cache:6wtZXllMV8AJ:https://forbrains.co.uk/international_tools/earth_timezones+&cd=1&hl=en&ct=clnk&gl=us
+// assuming user location is Singapore, hence UTC in minutes is 480
+var userTimezone = 480;
+
+var nowTime = (new Date).getTime() - (userTimezone - 300) * 60 * 1000;
+var startDate = new Date(nowTime - durationPeriod * 24 * 60 * 60 * 1000);
 var startDateString = startDate.toISOString().substring(0, 10);
 
 var crawlTop15TrendsName = function() {
@@ -98,7 +105,7 @@ var crawlKeywordListTrends = function(titleListLst) {
 				googleTrends.interestOverTime({
 					keyword: titleList,
 					startTime: new Date(startDateString), 
-					resolution: region
+					geo: region
 				}).then((res) => {
 					cbBind(resolve, res);
 				}).catch((err) => {
